@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#15110f" />
+  <meta name="description" content="A polished little Irani chai café game. Catch Osmania biscuits, pour chai, and build your rush-hour combo." />
+  <title>Irani Chai Blitz — Ustaad Ji's Café</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      background: #23160e;
+      color: #f7e6ce;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    header {
+      text-align: center;
+      padding: 12px 10px 6px;
+    }
+    h1 {
+      font-size: 1.8rem;
+      color: #ffb852;
+      text-shadow: 2px 2px 0px #702f00;
+    }
+    .hud-bar {
+      display: flex;
+      gap: 18px;
+      margin-top: 6px;
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+    .hud-pill {
+      background: #3d2314;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid #754425;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    }
+    #game-container {
+      display: flex;
+      gap: 16px;
+      width: 95%;
+      max-width: 940px;
+      margin: 12px auto;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    /* Left Canvas: Biscuit Catching */
+    .game-box {
+      background: #1b1009;
+      border: 3px solid #6b3d1f;
+      border-radius: 12px;
+      padding: 10px;
+      position: relative;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+    }
+    canvas {
+      background: linear-gradient(to bottom, #2b180d, #422413);
+      border-radius: 8px;
+      display: block;
+      cursor: ew-resize;
+    }
+    /* Right Panel: Chai Clicker & Upgrades */
+    .side-panel {
+      width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .clicker-card {
+      background: #2e1a0e;
+      border: 2px solid #7a4623;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .samovar-btn {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #e6953b 20%, #a04e0a 90%);
+      border: 4px solid #f8c177;
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 10px 0;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+      transition: transform 0.05s ease, filter 0.1s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .samovar-btn:active {
+      transform: scale(0.93);
+      filter: brightness(1.2);
+    }
+    .upgrades-list {
+      background: #24140b;
+      border: 2px solid #5a3319;
+      border-radius: 10px;
+      padding: 12px;
+      max-height: 250px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .upgrade-btn {
+      background: #472613;
+      border: 1px solid #995c2e;
+      color: #ffe3c7;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.88rem;
+      transition: background 0.15s ease;
+    }
+    .upgrade-btn:hover:not(:disabled) {
+      background: #6e3a1c;
+    }
+    .upgrade-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(14, 8, 4, 0.9);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      z-index: 10;
+    }
+    .play-btn {
+      background: #f7941d;
+      color: #2b1202;
+      border: none;
+      padding: 12px 28px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .play-btn:hover {
+      background: #ffaa3b;
+    }
+  
+    :root {
+      color-scheme: dark;
+      --ink: #f7f0e4;
+      --muted: #b9a995;
+      --gold: #e4b96d;
+      --gold-bright: #f4d28f;
+      --line: rgba(228, 185, 109, .2);
+      --panel: rgba(34, 25, 21, .88);
+      --panel-raised: rgba(48, 35, 28, .94);
+      --serif: Georgia, 'Times New Roman', serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100svh;
+      padding: 28px 20px 42px;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 50% -18%, rgba(157, 92, 37, .28), transparent 52%),
+        radial-gradient(ellipse at 8% 70%, rgba(124, 48, 34, .14), transparent 34%),
+        #15110f;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      letter-spacing: .01em;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .13;
+      background-image: radial-gradient(rgba(255,255,255,.16) .55px, transparent .55px);
+      background-size: 7px 7px;
+      mask-image: linear-gradient(to bottom, black, transparent 90%);
+    }
+    header { position: relative; padding: 10px 8px 24px; }
+    header::before {
+      content: 'THE OLD CITY · EST. EVERY EVENING';
+      display: block;
+      margin-bottom: 12px;
+      color: var(--gold);
+      font-size: .63rem;
+      font-weight: 700;
+      letter-spacing: .24em;
+    }
+    h1 {
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: clamp(1.8rem, 5vw, 2.65rem);
+      font-weight: 500;
+      letter-spacing: -.035em;
+      text-shadow: none;
+    }
+    h1::after {
+      content: 'A LITTLE CHAOS. A LOT OF CHAI.';
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font: 500 .67rem 'Segoe UI', system-ui, sans-serif;
+      letter-spacing: .2em;
+    }
+    .hud-bar {
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 22px;
+      font-size: .82rem;
+    }
+    .hud-pill {
+      min-width: 105px;
+      padding: 9px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(40, 30, 25, .7);
+      box-shadow: 0 6px 20px rgba(0,0,0,.15);
+      color: var(--muted);
+      font-weight: 500;
+      backdrop-filter: blur(12px);
+    }
+    .hud-pill span { color: var(--gold-bright); font-variant-numeric: tabular-nums; }
+    #game-container {
+      align-items: stretch;
+      gap: 18px;
+      width: min(100%, 1040px);
+      margin: 0 auto;
+    }
+    .game-box {
+      flex: 1 1 460px;
+      min-width: 0;
+      padding: 10px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: linear-gradient(145deg, rgba(36,28,24,.95), rgba(23,18,16,.98));
+      box-shadow: 0 24px 70px rgba(0,0,0,.36), inset 0 1px rgba(255,255,255,.045);
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 23 / 24;
+      border-radius: 14px;
+      background: radial-gradient(ellipse at 50% 15%, #58391e, #261a13 62%, #201713);
+      touch-action: none;
+      cursor: crosshair;
+    }
+    .side-panel { flex: 0 1 350px; width: auto; gap: 14px; }
+    .clicker-card, .upgrades-list {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--panel);
+      box-shadow: 0 18px 45px rgba(0,0,0,.2), inset 0 1px rgba(255,255,255,.04);
+      backdrop-filter: blur(16px);
+    }
+    .clicker-card { min-height: 292px; padding: 23px 18px; }
+    .clicker-card h3, .upgrades-list h4 {
+      color: var(--ink) !important;
+      font: 500 1.2rem var(--serif);
+      letter-spacing: -.02em;
+    }
+    .clicker-card p { color: var(--muted) !important; font-size: .82rem !important; }
+    .samovar-btn {
+      width: 146px;
+      height: 146px;
+      margin: 19px 0 14px;
+      border: 1px solid rgba(255, 228, 174, .9);
+      background: radial-gradient(circle at 36% 26%, #f2d297 0, #d89b4a 28%, #8e4a23 76%, #63331d 100%);
+      box-shadow: 0 0 0 7px rgba(228,185,109,.07), 0 14px 36px rgba(0,0,0,.46), inset 0 2px 8px rgba(255,255,255,.35);
+      color: #28180e;
+      font-size: 1.12rem;
+      transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .samovar-btn:hover { filter: brightness(1.08); box-shadow: 0 0 0 9px rgba(228,185,109,.09), 0 18px 42px rgba(0,0,0,.5), inset 0 2px 8px rgba(255,255,255,.4); }
+    .samovar-btn:active { transform: scale(.95); }
+    .clicker-card > div { color: var(--muted); }
+    .clicker-card strong, .clicker-card #cps-val { color: var(--gold-bright); }
+    .upgrades-list { max-height: none; padding: 19px; gap: 9px; }
+    .upgrades-list h4 { margin-bottom: 4px !important; }
+    .upgrade-btn {
+      min-height: 58px;
+      padding: 11px 13px;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 12px;
+      background: var(--panel-raised);
+      color: var(--ink);
+      text-align: left;
+      line-height: 1.4;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+    .upgrade-btn strong { color: var(--gold-bright); font-weight: 600; }
+    .upgrade-btn span:last-child { color: var(--gold); white-space: nowrap; }
+    .upgrade-btn:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(228,185,109,.38); background: #3c2b20; }
+    .upgrade-btn:disabled { opacity: .4; }
+    button { font: inherit; }
+    button:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 3px; }
+    .overlay {
+      inset: 10px;
+      border: 1px solid rgba(228,185,109,.29);
+      border-radius: 14px;
+      padding: 24px;
+      background: linear-gradient(160deg, rgba(25,19,16,.89), rgba(18,14,12,.96));
+      backdrop-filter: blur(8px);
+    }
+    .overlay h2 { color: var(--gold-bright); font: 500 clamp(1.7rem,5vw,2.35rem) var(--serif); }
+    .overlay p { color: #d0bd9f !important; line-height: 1.75; }
+    .play-btn {
+      padding: 14px 26px;
+      border: 1px solid #ffe2a8;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #f2d293, #d99c50);
+      color: #29190f;
+      font-size: .78rem;
+      letter-spacing: .16em;
+      box-shadow: 0 10px 28px rgba(190,120,43,.24);
+      transition: transform .16s ease, filter .16s ease;
+    }
+    .play-btn:hover { transform: translateY(-2px); filter: brightness(1.07); background: linear-gradient(135deg, #f2d293, #d99c50); }
+    @media (max-width: 760px) {
+      body { padding: 20px 14px 28px; }
+      header { padding-bottom: 20px; }
+      #game-container { gap: 14px; }
+      .game-box { flex-basis: 100%; padding: 7px; border-radius: 18px; }
+      canvas { max-height: 58svh; }
+      .side-panel { flex: 1 1 100%; }
+      .clicker-card { min-height: 260px; }
+      .upgrades-list { padding: 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>☕ Ustaad Ji's Irani Chai Blitz 🍪</h1>
+    <div class="hud-bar">
+      <div class="hud-pill">⏱️ Time: <span id="time-val">45.0</span>s</div>
+      <div class="hud-pill">💰 ₹<span id="cash-val">0</span></div>
+      <div class="hud-pill">🔥 Combo: <span id="combo-val">1.0</span>x</div>
+    </div>
+  </header>
+
+  <div id="game-container">
+    <!-- Catching Canvas -->
+    <div class="game-box">
+      <canvas id="biscuitCanvas" width="460" height="480"></canvas>
+      <div id="game-overlay" class="overlay">
+        <h2>Irani Rush Hour!</h2>
+        <p style="text-align: center; max-width: 320px; font-size: 0.95rem; color: #ffd6a8;">
+          Move your saucer to catch falling Osmania biscuits! Click the Samovar on the right to pour cups of Chai and earn rupees!
+        </p>
+        <button id="start-btn" class="play-btn">START SHIFT</button>
+      </div>
+    </div>
+
+    <!-- Clicker & Upgrades -->
+    <div class="side-panel">
+      <div class="clicker-card">
+        <h3>Pani Kum Chai Samovar</h3>
+        <p style="font-size: 0.85rem; color: #deb188; margin-top: 4px;">Tap rapidly to pour hot cups!</p>
+        <button id="samovar-btn" class="samovar-btn">
+          <span>☕ TAP!</span>
+          <span style="font-size: 0.75rem; margin-top: 4px;">Pour Chai</span>
+        </button>
+        <div style="font-size: 0.9rem; margin-top: 6px;">
+          Cups Poured: <strong id="chai-count">0</strong> | Passive: <span id="cps-val">0</span>/s
+        </div>
+      </div>
+
+      <div class="upgrades-list">
+        <h4 style="color: #ffc278; margin-bottom: 4px;">Café Upgrades</h4>
+        <button id="upg-chotu" class="upgrade-btn">
+          <span><strong>Chotu Apprentice</strong> (+1 Chai/s)</span>
+          <span id="upg-chotu-cost">₹50</span>
+        </button>
+        <button id="upg-plate" class="upgrade-btn">
+          <span><strong>Broad Saucer</strong> (+25% Width)</span>
+          <span id="upg-plate-cost">₹120</span>
+        </button>
+        <button id="upg-malai" class="upgrade-btn">
+          <span><strong>Double Malai Tap</strong> (+₹3/Tap)</span>
+          <span id="upg-malai-cost">₹200</span>
+        </button>
+        <button id="upg-bakery" class="upgrade-btn">
+          <span><strong>Subhan Baker Rush</strong> (Extra Time Drops)</span>
+          <span id="upg-bakery-cost">₹450</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State variables
+    let gameActive = false;
+    let timer = 45.0;
+    let cash = 0;
+    let combo = 1.0;
+    let comboCounter = 0;
+    let chaiPoured = 0;
+    let cashPerClick = 5;
+    let passiveChaiPerSec = 0;
+
+    // Upgrades
+    let saucerWidth = 85;
+    let broadSaucerBought = false;
+    let subhanBakerLevel = 0;
+
+    const costs = {
+      chotu: 50,
+      plate: 120,
+      malai: 200,
+      bakery: 450
+    };
+
+    // DOM Elements
+    const canvas = document.getElementById("biscuitCanvas");
+    const ctx = canvas.getContext("2d");
+    const timeVal = document.getElementById("time-val");
+    const cashVal = document.getElementById("cash-val");
+    const comboVal = document.getElementById("combo-val");
+    const chaiCount = document.getElementById("chai-count");
+    const cpsVal = document.getElementById("cps-val");
+    const overlay = document.getElementById("game-overlay");
+    const startBtn = document.getElementById("start-btn");
+    const samovarBtn = document.getElementById("samovar-btn");
+
+    // Upgrade buttons
+    const upgChotu = document.getElementById("upg-chotu");
+    const upgPlate = document.getElementById("upg-plate");
+    const upgMalai = document.getElementById("upg-malai");
+    const upgBakery = document.getElementById("upg-bakery");
+
+    // Biscuit Bucket / Saucer
+    const saucer = {
+      x: canvas.width / 2 - saucerWidth / 2,
+      y: canvas.height - 35,
+      h: 18
+    };
+
+    // Falling Objects
+    let biscuits = [];
+    let particles = [];
+    let spawnTimer = 0;
+
+    // Mouse / Touch control
+    function updateSaucerPos(clientX) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const relativeX = (clientX - rect.left) * scaleX;
+      saucer.x = Math.max(0, Math.min(canvas.width - saucerWidth, relativeX - saucerWidth / 2));
+    }
+
+    canvas.addEventListener("mousemove", (e) => updateSaucerPos(e.clientX));
+    canvas.addEventListener("touchmove", (e) => {
+      if (e.touches.length > 0) {
+        updateSaucerPos(e.touches[0].clientX);
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    // Biscuit Spawning
+    function spawnBiscuit() {
+      const isGolden = Math.random() < 0.18;
+      biscuits.push({
+        x: 25 + Math.random() * (canvas.width - 50),
+        y: -20,
+        radius: isGolden ? 17 : 14,
+        speed: 2.2 + Math.random() * 2.6,
+        isGolden: isGolden,
+        rotation: Math.random() * Math.PI,
+        rotSpeed: (Math.random() - 0.5) * 0.08
+      });
+    }
+
+    // Add particle feedback
+    function createParticles(x, y, color, count = 8) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 4,
+          vy: (Math.random() - 1.2) * 3,
+          alpha: 1,
+          color: color,
+          size: 2 + Math.random() * 3
+        });
+      }
+    }
+
+    // Tap Samovar
+    samovarBtn.addEventListener("click", () => {
+      if (!gameActive) return;
+      chaiPoured++;
+      chaiCount.textContent = chaiPoured;
+      const earned = Math.round(cashPerClick * combo);
+      cash += earned;
+      timer = Math.min(60, timer + 0.15); // Little boost to clock
+      cashVal.textContent = cash;
+
+      // Small visual pop
+      samovarBtn.style.transform = "scale(0.92)";
+      setTimeout(() => { samovarBtn.style.transform = "scale(1)"; }, 70);
+      updateUpgradeButtons();
+    });
+
+    // Start Game
+    startBtn.addEventListener("click", () => {
+      resetGame();
+      overlay.style.display = "none";
+      gameActive = true;
+    });
+
+    function resetGame() {
+      timer = 45.0;
+      cash = 0;
+      combo = 1.0;
+      comboCounter = 0;
+      chaiPoured = 0;
+      biscuits = [];
+      particles = [];
+      cashVal.textContent = cash;
+      chaiCount.textContent = chaiPoured;
+      comboVal.textContent = combo.toFixed(1);
+    }
+
+    // Upgrade Logic
+    upgChotu.addEventListener("click", () => {
+      if (cash >= costs.chotu) {
+        cash -= costs.chotu;
+        passiveChaiPerSec += 1;
+        costs.chotu = Math.round(costs.chotu * 1.5);
+        document.getElementById("upg-chotu-cost").textContent = `₹${costs.chotu}`;
+        cpsVal.textContent = passiveChaiPerSec;
+        updateUpgradeButtons();
+      }
+    });
+
+    upgPlate.addEventListener("click", () => {
+      if (cash >= costs.plate && !broadSaucerBought) {
+        cash -= costs.plate;
+        broadSaucerBought = true;
+        saucerWidth = Math.round(saucerWidth * 1.35);
+        upgPlate.disabled = true;
+        upgPlate.querySelector("span:last-child").textContent = "EQUIPPED";
+        updateUpgradeButtons();
+      }
+    });
+
+    upgMalai.addEventListener("click", () => {
+      if (cash >= costs.malai) {
+        cash -= costs.malai;
+        cashPerClick += 3;
+        costs.malai = Math.round(costs.malai * 1.6);
+        document.getElementById("upg-malai-cost").textContent = `₹${costs.malai}`;
+        updateUpgradeButtons();
+      }
+    });
+
+    upgBakery.addEventListener("click", () => {
+      if (cash >= costs.bakery) {
+        cash -= costs.bakery;
+        subhanBakerLevel++;
+        costs.bakery = Math.round(costs.bakery * 1.7);
+        document.getElementById("upg-bakery-cost").textContent = `₹${costs.bakery}`;
+        updateUpgradeButtons();
+      }
+    });
+
+    function updateUpgradeButtons() {
+      cashVal.textContent = cash;
+      upgChotu.disabled = cash < costs.chotu;
+      if (!broadSaucerBought) upgPlate.disabled = cash < costs.plate;
+      upgMalai.disabled = cash < costs.malai;
+      upgBakery.disabled = cash < costs.bakery;
+    }
+
+    // Game Loop
+    let lastTime = performance.now();
+
+    function gameLoop(now) {
+      const dt = (now - lastTime) / 1000;
+      lastTime = now;
+
+      if (gameActive) {
+        // Countdown
+        timer -= dt;
+        if (timer <= 0) {
+          timer = 0;
+          gameActive = false;
+          overlay.style.display = "flex";
+          overlay.querySelector("h2").textContent = "Time's Up, Ustaad!";
+          overlay.querySelector("p").innerHTML = `Shift Complete!<br>Final Earnings: <strong>₹${cash}</strong><br>Total Chai Poured: <strong>${chaiPoured}</strong>`;
+          startBtn.textContent = "PLAY AGAIN";
+        }
+        timeVal.textContent = timer.toFixed(1);
+
+        // Passive Income
+        if (passiveChaiPerSec > 0) {
+          cash += passiveChaiPerSec * dt * 5 * combo;
+          updateUpgradeButtons();
+        }
+
+        // Spawn Biscuits
+        spawnTimer += dt;
+        if (spawnTimer > 0.8) {
+          spawnBiscuit();
+          spawnTimer = 0;
+        }
+
+        // Update Biscuits
+        for (let i = biscuits.length - 1; i >= 0; i--) {
+          const b = biscuits[i];
+          b.y += b.speed;
+          b.rotation += b.rotSpeed;
+
+          // Catch Check
+          if (
+            b.y + b.radius >= saucer.y &&
+            b.y - b.radius <= saucer.y + saucer.h &&
+            b.x >= saucer.x &&
+            b.x <= saucer.x + saucerWidth
+          ) {
+            // Caught!
+            const bonus = b.isGolden ? 40 : 10;
+            const timeBonus = (b.isGolden ? 1.5 : 0.6) + (subhanBakerLevel * 0.2);
+            cash += Math.round(bonus * combo);
+            timer = Math.min(60, timer + timeBonus);
+
+            comboCounter++;
+            if (comboCounter % 3 === 0 && combo < 3.0) {
+              combo = +(combo + 0.2).toFixed(1);
+            }
+            comboVal.textContent = combo.toFixed(1);
+
+            createParticles(b.x, b.y, b.isGolden ? "#ffd700" : "#d2a06b", 10);
+            biscuits.splice(i, 1);
+            updateUpgradeButtons();
+            continue;
+          }
+
+          // Dropped
+          if (b.y > canvas.height + 20) {
+            combo = 1.0;
+            comboCounter = 0;
+            comboVal.textContent = combo.toFixed(1);
+            createParticles(b.x, canvas.height - 5, "#664426", 5);
+            biscuits.splice(i, 1);
+          }
+        }
+
+        // Update Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.alpha -= dt * 1.8;
+          if (p.alpha <= 0) particles.splice(i, 1);
+        }
+      }
+
+      // Render
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw Café Table Edge at bottom
+      ctx.fillStyle = "#1e1108";
+      ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+
+      // Draw Saucer (Player)
+      ctx.save();
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.ellipse(saucer.x + saucerWidth / 2, saucer.y + 8, saucerWidth / 2, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner rim pattern
+      ctx.strokeStyle = "#c29b62";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(saucer.x + saucerWidth / 2, saucer.y + 8, saucerWidth / 2 - 6, 5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // Draw Biscuits
+      biscuits.forEach((b) => {
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(b.rotation);
+
+        // Biscuit Body
+        ctx.beginPath();
+        ctx.arc(0, 0, b.radius, 0, Math.PI * 2);
+        ctx.fillStyle = b.isGolden ? "#ffc83b" : "#d9a05b";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = b.isGolden ? "#fffaad" : "#8f5721";
+        ctx.stroke();
+
+        // Osmania classic prick notches
+        ctx.fillStyle = b.isGolden ? "#a36e00" : "#6e3f16";
+        for (let j = 0; j < 4; j++) {
+          const angle = (j * Math.PI) / 2;
+          ctx.beginPath();
+          ctx.arc(Math.cos(angle) * (b.radius * 0.5), Math.sin(angle) * (b.radius * 0.5), 1.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+      });
+
+      // Draw Particles
+      particles.forEach((p) => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    // Start Animation Loop
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
+
+
+
